@@ -7,9 +7,8 @@
 #include "stdio.h"
 
 #include "derivative.h" /* include peripheral declarations */
-
-#include "Qcode.h"
-#include "fir.h"
+#include "qCode.h"
+#include "iir.h"
 /* this macro attempt to enable watchdog module */
 #if	defined (COP_CTRL)
 	#define EnableWatchdog \
@@ -37,15 +36,43 @@
 
 int main(void)
 { 
-    uint16_t a, b;
-    uint32_t c;
-    a = 0x1000;
-    b = 0x0001;
-    Q115operationsTest(a,b);
+	/*
+    uint16_t a,b;
+    a = 0x0201;
+    b = 0x2104;
+    
+    printf("a = %X\n", a);
+    printf("b = %X\n", b);
+    printf("Q115add = %lX\n", Q115add(a,b));
+    printf("Q115sub = %lX\n", Q115sub(a,b));
+    printf("Q115mul = %lX\n", Q115mul(a,b));
+    printf("Q115div = %lX\n", Q115div(a,b));
+    */
+	
+	int32_t result = 0;
+	int i;
+	float data[16] = {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	
+	
+	
+	IIR_Init();
+	for(i = 0; i<3; i++)
+	{
+		result = IIR_filter_TOP(data[i]);
+		printf("IIR response: %ld\n\r", result);
+	}
+	
+	
     fflush_console();
 	
     return(0);
 }
+
+
+
+
+
+
 
 
 
