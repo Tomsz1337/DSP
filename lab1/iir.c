@@ -1,64 +1,51 @@
-#include "fir.h"
-#include "qCode.h"
-#define NOF_SAMPLES 16
+#include "iir.h"
 
-const float fir_coeff[NOF_SAMPLES]  = {0.034, 0.074, 0.0188, 0.0395, 0.0677, 0.0984, 0.1248, 0.1400, 0.1400, 0.1248, 0.0984, 0.0677, 0.0395, 0.0188, 0.074, 0.034};
-const float firQ_coeff[NOF_SAMPLES] = {112,   243,   618,    1293,   2217,   3225,   4089,   4587,   4587,   4089,   3225,   2217,   1293,   618,    243,   112  };
+// Współczynniki filtra:
+// licznik: Q1.15
+static const int16_t b[3] = {2029, 4058, 2029};
 
-float circural_buff[NOF_SAMPLES];
-float circural_Qbuff[NOF_SAMPLES];
+// mianownik: Q2.14 
+static const int16_t a[3] = {16384,-20732, 10080};
 
-static void bufferStep(float new_sample){
-    uint8_t sampleCtr;
-    for(sampleCtr = NOF_SAMPLES; sampleCtr > 0; sampleCtr--)
-        circural_buff[sampleCtr] = circural_buff[sampleCtr-1];
+// Bufory wejściowe i wyjściowe
+static int16_t x[3] = {0};
+static int16_t y[3] = {0};
 
-    circural_buff[0] = new_sample;
-}
-
-/*
-    FIR_filter:
-    Calculates one FIR output and gets one input
-*/
-float FIR_filter(float data){
-    float Accumulator = 0;
-    uint8_t sampleCtr;
-
-    bufferStep(data);
-
-    for(sampleCtr = 0; sampleCtr < NOF_SAMPLES; sampleCtr++)
-        Accumulator += circural_buff[sampleCtr] * fir_coeff[sampleCtr];
-
-    return Accumulator;
-}
-
-/*
-    FIR_Init:
-    Clears circural buffer
-*/
-void FIR_Init(void){
-    uint8_t sampleCtr;
-    for(sampleCtr = 0; sampleCtr < NOF_SAMPLES; sampleCtr++){
-        circural_buff[sampleCtr] = 0;
+void IIR_Init(void) {
+    for (int i = 0; i < 3; i++) {
+        x[i] = 0;
+        y[i] = 0;
     }
 }
 
+int16_t IIR_filter(int16_t input) {
+    // Przesuwanie próbek
+    x[2] = x[1];
+    x[1] = x[0];
+    x[0] = input;
 
-/*
-    FIRQ_filter:
-    Calculates one FIR output and gets one input
-*/
-int32_t FIRQ_filter(int32_t data){
-    float Accumulator = 0;
-    uint8_t sampleCtr;
+    y[2] = y[1];
+    y[1] = y[0];
 
-    bufferStep(data);
+    // Liczenie licznika: Q1.15 * Q1.15 = Q30
+    int32_t acc = 0;
+    acc += (int32_t)b[0] * x[0];
+    acc += (int32_t)b[1] * x[1];
+    acc += (int32_t)b[2] * x[2];
 
-    for(sampleCtr = 0; sampleCtr < NOF_SAMPLES; sampleCtr++)
-    {
-    	Accumulator += circural_buff[sampleCtr] * firQ_coeff[sampleCtr];
-    }
-        
+    // Liczenie mianownika: Q2.14 * Q1.15 = Q29 → przesunięcie >>1 by dopasować do Q2.30
+    acc -= ((int32_t)a[0] * y[1]) >> 1;
+    acc -= ((int32_t)a[1] * y[2]) >> 1;
 
-    return Accumulator;
+    // Przeskalowanie z Q30 → Q15 z zaokrągleniem
+    acc = (acc + (1 << 14)) >> 15;
+
+    if (acc > 32767) acc = 32767;
+    else if (acc < -32768) acc = -32768;
+
+    // Zapisanie do bufora wyjściowego
+    y[0] = (int16_t)acc;
+
+    return y[0];
 }
+

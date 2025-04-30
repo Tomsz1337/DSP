@@ -1,16 +1,7 @@
-/*
- * iir.h
- *
- *  Created on: Mar 21, 2025
- *      Author: student
- */
+#ifndef IIR_FILTER_H
+#define IIR_FILTER_H
 
-#ifndef IIR_H_
-#define IIR_H_
 #include <stdint.h>
-
 void IIR_Init(void);
-int32_t IIR_filter_BOT(int32_t data);
-int32_t IIR_filter_TOP(int32_t data);
-int32_t IIR(int16_t data);
-#endif /* IIR_H_ */
+int16_t IIR_filter(int16_t input);
+#endif 
