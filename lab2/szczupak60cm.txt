@@ -1,0 +1,140 @@
+/*  Freescale sample code  */
+
+
+/* here we test the thinner console print */
+/* printf is too large for MC56F8006 */
+#include "console.h"
+#include "stdio.h"
+#include "math.h"
+#include "derivative.h" /* include peripheral declarations */
+
+/* this macro attempt to enable watchdog module */
+#if	defined (COP_CTRL)
+	#define EnableWatchdog \
+		COP_CTRL |= (0x2);
+#elif defined ( COPCTL )
+	#define EnableWatchdog \
+		COPCTL |= (0x2);
+#else
+	#define EnableWatchdog	\
+	__ConsoleWrite(0, " no watchdog enable procedure\n", 29);
+#endif // #define EnableWatchdog
+
+/* this macro attempt to disable watchdog module */
+#if	defined (COP_CTRL)
+	#define DisableWatchdog \
+		COP_CTRL &= ~(0x2);
+#elif defined ( COPCTL )
+	#define DisableWatchdog \
+		COPCTL &= ~(0x2);
+#else
+	#define DisableWatchdog	\
+	__ConsoleWrite(0, " no watchdog disable procedure\n", 30);
+#endif // #define DisableWatchdog
+
+#define N 32
+#define PI 3.14
+
+float X_Re[N];
+float X_Im[N];
+
+float W_Re[N / 2] = {
+	     1.000000,  0.980785,  0.923880,  0.831470,
+	     0.707107,  0.555570,  0.382684,  0.195090,
+	     0.000000, -0.195090, -0.382684, -0.555570,
+	    -0.707107, -0.831470, -0.923880, -0.980785
+	};
+float W_Im[N / 2] = {
+	     0.000000, -0.195090, -0.382684, -0.555570,
+	    -0.707107, -0.831470, -0.923880, -0.980785,
+	    -1.000000, -0.980785, -0.923880, -0.831470,
+	    -0.707107, -0.555570, -0.382684, -0.195090
+	};
+
+uint16_t x[N];
+
+uint16_t reverseBits(uint16_t value);
+void computeWcoef(void); 
+void fft(void);
+
+int main(void)
+{ 
+	int i;
+	for(i =0; i < N; i++)
+	{
+		x[i] = 1;
+	}
+	
+	fft();
+	
+	while(1){}
+    return(0);
+}
+
+
+uint16_t reverseBits(uint16_t value)
+{
+    uint16_t result = 0;
+    uint16_t bits = value & 0x1F;
+    int i;
+    for(i = 0; i < 5; i++)
+    {
+    	if(bits & (1 << i))
+    	{
+    		result |= (1 << (4 - i));
+    	}
+    }
+}
+
+
+
+void fft(void)
+{
+    float temp_Re[N], temp_Im[N];
+    int i;
+    
+    for (i = 0; i < N; ++i) 
+    {
+        uint16_t rev = reverseBits(i);
+        temp_Re[i] = x[rev];
+    }
+    for (i = 0; i < N; ++i)
+    {
+        X_Re[i] = x[i];
+    }
+
+    for (i= 1; i <= 5; i++) 
+    {  
+        int m = 1 << i;             
+        int m2 = m >> 1;            
+        int step = N / m;
+        int k;
+        int j;
+        for (k = 0; k < N; k += m) {
+            for (j = 0; j < m2; j++) {
+                int index1 = k + j;
+                int index2 = index1 + m2;
+
+                float t_Re = X_Re[index2];
+                float t_Im = X_Im[index2];
+
+                float w_r = W_Re[j * step];
+                float w_i = W_Im[j * step];
+
+                // Mnożenie t przez W
+                float wr = t_Re * w_r - t_Im * w_i;
+                float wi = t_Re * w_i + t_Im * w_r;
+
+                // Motylek
+                float ur = X_Re[index1];
+                float ui = X_Im[index1];
+
+                X_Re[index1]     = ur + wr;
+                X_Im[index1]     = ui + wi;
+                X_Re[index2]     = ur - wr;
+                X_Im[index2]     = ui - wi;
+            }
+        }
+    }
+}
+
