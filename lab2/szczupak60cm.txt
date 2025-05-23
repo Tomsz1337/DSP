@@ -1,37 +1,3 @@
-/*  Freescale sample code  */
-
-
-/* here we test the thinner console print */
-/* printf is too large for MC56F8006 */
-#include "console.h"
-#include "stdio.h"
-#include "math.h"
-#include "derivative.h" /* include peripheral declarations */
-
-/* this macro attempt to enable watchdog module */
-#if	defined (COP_CTRL)
-	#define EnableWatchdog \
-		COP_CTRL |= (0x2);
-#elif defined ( COPCTL )
-	#define EnableWatchdog \
-		COPCTL |= (0x2);
-#else
-	#define EnableWatchdog	\
-	__ConsoleWrite(0, " no watchdog enable procedure\n", 29);
-#endif // #define EnableWatchdog
-
-/* this macro attempt to disable watchdog module */
-#if	defined (COP_CTRL)
-	#define DisableWatchdog \
-		COP_CTRL &= ~(0x2);
-#elif defined ( COPCTL )
-	#define DisableWatchdog \
-		COPCTL &= ~(0x2);
-#else
-	#define DisableWatchdog	\
-	__ConsoleWrite(0, " no watchdog disable procedure\n", 30);
-#endif // #define DisableWatchdog
-
 #define N 32
 #define PI 3.14
 
@@ -51,7 +17,7 @@ float W_Im[N / 2] = {
 	    -0.707107, -0.555570, -0.382684, -0.195090
 	};
 
-uint16_t x[N];
+short x[N];
 
 uint16_t reverseBits(uint16_t value);
 void computeWcoef(void); 
@@ -60,9 +26,15 @@ void fft(void);
 int main(void)
 { 
 	int i;
-	for(i =0; i < N; i++)
+	/*for(i =0; i < N; i++)
 	{
-		x[i] = 1;
+		x[i] = 0;
+	}
+	x[0] = 1;*/
+	short pattern [4] = {0,-1,0,1};
+	for(i = 0; i < N; i++)
+	{
+		x[i] = pattern[(i%4)];
 	}
 	
 	fft();
@@ -84,25 +56,21 @@ uint16_t reverseBits(uint16_t value)
     		result |= (1 << (4 - i));
     	}
     }
+    return result;
 }
 
 
 
 void fft(void)
 {
-    float temp_Re[N], temp_Im[N];
     int i;
     
     for (i = 0; i < N; ++i) 
     {
         uint16_t rev = reverseBits(i);
-        temp_Re[i] = x[rev];
+        X_Re[i] = x[rev];
+        X_Im[i] = 0.0f;
     }
-    for (i = 0; i < N; ++i)
-    {
-        X_Re[i] = x[i];
-    }
-
     for (i= 1; i <= 5; i++) 
     {  
         int m = 1 << i;             
@@ -137,4 +105,3 @@ void fft(void)
         }
     }
 }
-
